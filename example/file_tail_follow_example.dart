@@ -7,7 +7,7 @@ void main(List<String> arguments) {
   if (arguments.length != 1) {
     stderr.write('You need to provide exactly one file to be tailed.\n');
   }
-  final (stream, _) = tailFile(File(arguments.first));
+  final (stream, _) = tailFile(File(arguments.first), follow: true);
   stream
       .transform(utf8.decoder)
       .transform(const LineSplitter())

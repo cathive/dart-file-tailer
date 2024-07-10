@@ -72,7 +72,7 @@ void main() {
     final fs = MemoryFileSystem(style: FileSystemStyle.posix);
     test('Default constructor / factory', () {
       final file = fs.file('/tmp/does-not-exist.txt');
-      final tailer = FileTailer(file);
+      final tailer = FileTailer(file, follow: true);
       expect(tailer.file, file);
     });
     test('tail()', () async {

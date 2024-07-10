@@ -1,5 +1,10 @@
 name: file_tailer
-description: Watch for file changes
+description: |
+  Watch files whose tails may change.
+
+  Useful for working with log files where contents gets appended.
+  This library offers a similar functionality that the `tail` program
+  available on most operating systems does.
 
 version: "1.0.0"
 

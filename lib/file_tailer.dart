@@ -29,17 +29,20 @@ abstract class FileTailer {
 
   // Creates a new tailer, that can be used to stream the contents of a file.
   factory FileTailer(final File file,
-          {final int bufferSize = _defaultBufferSize,
+          {final bool follow = false,
+          final int bufferSize = _defaultBufferSize,
           final Duration readTimeout = _defaultReadTimeout}) =>
-      _FileTailer(file, bufferSize: bufferSize, readTimeout: readTimeout);
+      _FileTailer(file,
+          follow: follow, bufferSize: bufferSize, readTimeout: readTimeout);
 }
 
 // Starts tailing the contents of a file.
 (Stream<List<int>>, Future<void> Function({int pos})) tailFile(final File file,
-    {final int bufferSize = _defaultBufferSize,
+    {final bool follow = false,
+    final int bufferSize = _defaultBufferSize,
     final Duration readTimeout = _defaultReadTimeout}) {
-  final tailer =
-      FileTailer(file, bufferSize: bufferSize, readTimeout: readTimeout);
+  final tailer = FileTailer(file,
+      follow: follow, bufferSize: bufferSize, readTimeout: readTimeout);
   return (tailer.stream(), tailer.cancel);
 }
 
@@ -54,12 +57,16 @@ class _FileTailer implements FileTailer {
   int _pos;
   bool _cancelled = false;
   int _cancelledPos = -1;
+  final bool _follow;
 
   _FileTailer(final File file,
-      {required final int bufferSize, required final Duration readTimeout})
+      {required final bool follow,
+      required final int bufferSize,
+      required final Duration readTimeout})
       : _file = file,
         _buf = Uint8List(bufferSize),
         _readTimeout = readTimeout,
+        _follow = follow,
         _pos = 0;
 
   @override
@@ -93,7 +100,7 @@ class _FileTailer implements FileTailer {
           // All other events should be ignored for now.
           break;
       }
-      if (_cancelled) {
+      if (_cancelled || !_follow) {
         await fileHandle.close();
         break;
       }
@@ -113,8 +120,11 @@ class _FileTailer implements FileTailer {
     while (!(_cancelled && _pos >= _cancelledPos)) {
       final bytesRead = await fileHandle.readInto(_buf).timeout(_readTimeout);
       if (bytesRead == 0) {
-        // Let's check if we have been cancelled.
-        continue;
+        if (_follow) {
+          // Let's check if we have been cancelled.
+          continue;
+        }
+        break;
       }
       _pos += bytesRead;
       yield _buf.sublist(0, bytesRead);
