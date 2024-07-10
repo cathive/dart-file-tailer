@@ -4,7 +4,7 @@ import 'dart:io' show Directory, File, FileMode, IOSink;
 import 'package:file/memory.dart' show FileSystemStyle, MemoryFileSystem;
 import 'package:file_tailer/file_tailer.dart' show FileTailer;
 import 'package:path/path.dart' as path;
-import 'package:test/test.dart' show group, setUp, tearDown, test, expect;
+import 'package:test/test.dart' show expect, group, setUp, tearDown, test;
 
 Directory? tmpDir;
 
@@ -88,7 +88,7 @@ void main() {
         tailer
             .stream()
             .transform(utf8.decoder)
-            .transform(LineSplitter())
+            .transform(const LineSplitter())
             .forEach((line) async {
           expect(line, movies[idx]);
           idx++;

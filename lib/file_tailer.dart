@@ -10,8 +10,8 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:async/async.dart' show StreamGroup;
 
-const _DEFAULT_BUFFER_SIZE = 8192;
-const _DEFAULT_READ_TIMEOUT = Duration(milliseconds: 100);
+const _defaultBufferSize = 8192;
+const _defaultReadTimeout = Duration(milliseconds: 100);
 
 /// Facility to tail the contents of a file.
 abstract class FileTailer {
@@ -29,15 +29,15 @@ abstract class FileTailer {
 
   // Creates a new tailer, that can be used to stream the contents of a file.
   factory FileTailer(final File file,
-          {final int bufferSize = _DEFAULT_BUFFER_SIZE,
-          final Duration readTimeout = _DEFAULT_READ_TIMEOUT}) =>
+          {final int bufferSize = _defaultBufferSize,
+          final Duration readTimeout = _defaultReadTimeout}) =>
       _FileTailer(file, bufferSize: bufferSize, readTimeout: readTimeout);
 }
 
 // Starts tailing the contents of a file.
 (Stream<List<int>>, Future<void> Function({int pos})) tailFile(final File file,
-    {final int bufferSize = _DEFAULT_BUFFER_SIZE,
-    final Duration readTimeout = _DEFAULT_READ_TIMEOUT}) {
+    {final int bufferSize = _defaultBufferSize,
+    final Duration readTimeout = _defaultReadTimeout}) {
   final tailer =
       FileTailer(file, bufferSize: bufferSize, readTimeout: readTimeout);
   return (tailer.stream(), tailer.cancel);
@@ -82,22 +82,20 @@ class _FileTailer implements FileTailer {
     await for (final event in events) {
       if (_cancelled) {
         await fileHandle.close();
-        return;
+        break;
       }
       switch (event.type) {
         case FileSystemEvent.modify:
           yield* _read(fileHandle);
-          break;
         case FileSystemEvent.delete:
           await cancel();
-          break;
         default:
           // All other events should be ignored for now.
           break;
       }
       if (_cancelled) {
         await fileHandle.close();
-        return;
+        break;
       }
     }
   }
