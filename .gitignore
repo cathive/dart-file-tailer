@@ -1,0 +1,7 @@
+/.dart_tool/
+/.vscode/settings.json
+
+/pubspec.lock
+
+/build/
+/doc/
