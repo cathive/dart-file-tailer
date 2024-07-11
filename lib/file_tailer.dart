@@ -6,12 +6,52 @@ import 'dart:io'
         FileSystemEvent,
         FileSystemModifyEvent,
         RandomAccessFile;
+import 'dart:math' show max;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:async/async.dart' show StreamGroup;
 
 const _defaultBufferSize = 8192;
 const _defaultReadTimeout = Duration(milliseconds: 100);
+
+final posRegex = RegExp(r'^(?<pfx>\+?)(?<num>\d+)$');
+
+int _calculatePos(final File file, {final String? bytes, String? lines}) {
+  // Fall back to default position if nothing else has been specified.
+  if (bytes == null && lines == null) {
+    return _calculatePos(file, lines: '10');
+  }
+
+  if (bytes != null && lines != null) {
+    throw ArgumentError(
+        'Either "bytes" or "lines" must be specified, not both.');
+  }
+
+  final posMode = bytes != null ? 'bytes' : 'lines';
+  final posDesc = posRegex.firstMatch((bytes ?? lines)!);
+  if (posDesc == null) {
+    throw ArgumentError('Argument $posMode must match format `[+]NUM`');
+  }
+
+  final posDir = posDesc.namedGroup('pfx') == '+' ? '+' : '-';
+  final posNum = int.parse(posDesc.namedGroup('num')!);
+
+  final fileLength = file.lengthSync();
+  final int pos;
+  switch (posMode) {
+    case 'bytes':
+      if (posDir == '+') {
+        pos = posNum > fileLength ? fileLength : posNum;
+      } else {
+        pos = max(fileLength - posNum, 0);
+      }
+    case 'lines':
+      throw ArgumentError('Not yet implemented.');
+    default:
+      throw UnimplementedError('posMode "$posMode" not supported.');
+  }
+  return pos;
+}
 
 /// Facility to tail the contents of a file.
 abstract class FileTailer {
@@ -30,19 +70,30 @@ abstract class FileTailer {
   // Creates a new tailer, that can be used to stream the contents of a file.
   factory FileTailer(final File file,
           {final bool follow = false,
+          final String? lines,
+          final String? bytes,
           final int bufferSize = _defaultBufferSize,
           final Duration readTimeout = _defaultReadTimeout}) =>
       _FileTailer(file,
-          follow: follow, bufferSize: bufferSize, readTimeout: readTimeout);
+          follow: follow,
+          bufferSize: bufferSize,
+          readTimeout: readTimeout,
+          pos: _calculatePos(file, lines: lines, bytes: bytes));
 }
 
 // Starts tailing the contents of a file.
 (Stream<List<int>>, Future<void> Function({int pos})) tailFile(final File file,
     {final bool follow = false,
+    final String? lines,
+    final String? bytes,
     final int bufferSize = _defaultBufferSize,
     final Duration readTimeout = _defaultReadTimeout}) {
   final tailer = FileTailer(file,
-      follow: follow, bufferSize: bufferSize, readTimeout: readTimeout);
+      follow: follow,
+      lines: lines,
+      bytes: bytes,
+      bufferSize: bufferSize,
+      readTimeout: readTimeout);
   return (tailer.stream(), tailer.cancel);
 }
 
@@ -62,12 +113,13 @@ class _FileTailer implements FileTailer {
   _FileTailer(final File file,
       {required final bool follow,
       required final int bufferSize,
-      required final Duration readTimeout})
+      required final Duration readTimeout,
+      required final int pos})
       : _file = file,
         _buf = Uint8List(bufferSize),
         _readTimeout = readTimeout,
         _follow = follow,
-        _pos = 0;
+        _pos = pos;
 
   @override
   File get file => _file;
@@ -83,7 +135,11 @@ class _FileTailer implements FileTailer {
     ]);
 
     final fileHandle = await _file.open(mode: FileMode.read);
-    _pos = await fileHandle.position();
+    if (_pos == 0) {
+      _pos = await fileHandle.position();
+    } else {
+      await fileHandle.setPosition(_pos);
+    }
 
     // Wait for modify events and read more bytes from file
     await for (final event in events) {

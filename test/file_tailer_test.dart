@@ -60,7 +60,10 @@ class FileContentsTester {
 }
 
 void main() {
+  final fs = MemoryFileSystem(style: FileSystemStyle.posix);
+
   setUp(() async {
+    await fs.file('/empty.txt').create();
     tmpDir = await Directory.systemTemp.createTemp('file_tailer_test_');
   });
   tearDown(() async {
@@ -69,15 +72,14 @@ void main() {
     }
   });
   group('FileTailer', () {
-    final fs = MemoryFileSystem(style: FileSystemStyle.posix);
     test('Default constructor / factory', () {
-      final file = fs.file('/tmp/does-not-exist.txt');
-      final tailer = FileTailer(file, follow: true);
+      final file = fs.file('/empty.txt');
+      final tailer = FileTailer(file, follow: true, bytes: '+0');
       expect(tailer.file, file);
     });
     test('tail()', () async {
       final file = await File(path.join(tmpDir!.path, 'movies.txt')).create();
-      final tailer = FileTailer(file);
+      final tailer = FileTailer(file, follow: false, bytes: '+0');
       final tester = FileContentsTester(file, movies,
           onClose: () async => await tailer.cancel(pos: await file.length()));
 
