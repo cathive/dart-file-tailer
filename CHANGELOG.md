@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An option to specify the last number of bytes only has been added, similar to
   the `-c` / `--bytes` flag of the tail command.
 
+- Additional factory method to create a tailer that explicitly starts tailing from the
+  beginning of a file has been added for improved convenience.
+
 ## [1.0.0] - 2024-07-10
 
 ### Added

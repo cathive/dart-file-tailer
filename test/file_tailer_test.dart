@@ -74,12 +74,12 @@ void main() {
   group('FileTailer', () {
     test('Default constructor / factory', () {
       final file = fs.file('/empty.txt');
-      final tailer = FileTailer(file, follow: true, bytes: '+0');
+      final tailer = FileTailer(file, bytes: '+0');
       expect(tailer.file, file);
     });
     test('tail()', () async {
       final file = await File(path.join(tmpDir!.path, 'movies.txt')).create();
-      final tailer = FileTailer(file, follow: false, bytes: '+0');
+      final tailer = FileTailer.fromStart(file);
       final tester = FileContentsTester(file, movies,
           onClose: () async => await tailer.cancel(pos: await file.length()));
 

@@ -69,16 +69,28 @@ abstract class FileTailer {
 
   // Creates a new tailer, that can be used to stream the contents of a file.
   factory FileTailer(final File file,
-          {final bool follow = false,
+          {final bool? follow,
           final String? lines,
           final String? bytes,
-          final int bufferSize = _defaultBufferSize,
-          final Duration readTimeout = _defaultReadTimeout}) =>
+          final int? bufferSize,
+          final Duration? readTimeout}) =>
       _FileTailer(file,
+          follow: follow ?? false,
+          bufferSize: bufferSize ?? _defaultBufferSize,
+          readTimeout: readTimeout ?? _defaultReadTimeout,
+          pos: _calculatePos(file, lines: lines, bytes: bytes));
+
+  // Creates a new tailer that ready everything from the start of the given
+  // file.
+  factory FileTailer.fromStart(final File file,
+          {final bool? follow,
+          final int? bufferSize,
+          final Duration? readTimeout}) =>
+      FileTailer(file,
           follow: follow,
           bufferSize: bufferSize,
           readTimeout: readTimeout,
-          pos: _calculatePos(file, lines: lines, bytes: bytes));
+          bytes: '+0');
 }
 
 // Starts tailing the contents of a file.
